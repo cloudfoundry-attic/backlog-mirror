@@ -5,25 +5,26 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/backlog-mirror/mirror"
+	"github.com/salsita/go-pivotaltracker/v5/pivotal"
 )
 
 type FakeStoryApi struct {
-	GetAllStoriesStub        func(int) mirror.Story
+	GetAllStoriesStub        func(int) *[]pivotal.Story
 	getAllStoriesMutex       sync.RWMutex
 	getAllStoriesArgsForCall []struct {
 		arg1 int
 	}
 	getAllStoriesReturns struct {
-		result1 mirror.Story
+		result1 *[]pivotal.Story
 	}
 	getAllStoriesReturnsOnCall map[int]struct {
-		result1 mirror.Story
+		result1 *[]pivotal.Story
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStoryApi) GetAllStories(arg1 int) mirror.Story {
+func (fake *FakeStoryApi) GetAllStories(arg1 int) *[]pivotal.Story {
 	fake.getAllStoriesMutex.Lock()
 	ret, specificReturn := fake.getAllStoriesReturnsOnCall[len(fake.getAllStoriesArgsForCall)]
 	fake.getAllStoriesArgsForCall = append(fake.getAllStoriesArgsForCall, struct {
@@ -47,7 +48,7 @@ func (fake *FakeStoryApi) GetAllStoriesCallCount() int {
 	return len(fake.getAllStoriesArgsForCall)
 }
 
-func (fake *FakeStoryApi) GetAllStoriesCalls(stub func(int) mirror.Story) {
+func (fake *FakeStoryApi) GetAllStoriesCalls(stub func(int) *[]pivotal.Story) {
 	fake.getAllStoriesMutex.Lock()
 	defer fake.getAllStoriesMutex.Unlock()
 	fake.GetAllStoriesStub = stub
@@ -60,26 +61,26 @@ func (fake *FakeStoryApi) GetAllStoriesArgsForCall(i int) int {
 	return argsForCall.arg1
 }
 
-func (fake *FakeStoryApi) GetAllStoriesReturns(result1 mirror.Story) {
+func (fake *FakeStoryApi) GetAllStoriesReturns(result1 *[]pivotal.Story) {
 	fake.getAllStoriesMutex.Lock()
 	defer fake.getAllStoriesMutex.Unlock()
 	fake.GetAllStoriesStub = nil
 	fake.getAllStoriesReturns = struct {
-		result1 mirror.Story
+		result1 *[]pivotal.Story
 	}{result1}
 }
 
-func (fake *FakeStoryApi) GetAllStoriesReturnsOnCall(i int, result1 mirror.Story) {
+func (fake *FakeStoryApi) GetAllStoriesReturnsOnCall(i int, result1 *[]pivotal.Story) {
 	fake.getAllStoriesMutex.Lock()
 	defer fake.getAllStoriesMutex.Unlock()
 	fake.GetAllStoriesStub = nil
 	if fake.getAllStoriesReturnsOnCall == nil {
 		fake.getAllStoriesReturnsOnCall = make(map[int]struct {
-			result1 mirror.Story
+			result1 *[]pivotal.Story
 		})
 	}
 	fake.getAllStoriesReturnsOnCall[i] = struct {
-		result1 mirror.Story
+		result1 *[]pivotal.Story
 	}{result1}
 }
 

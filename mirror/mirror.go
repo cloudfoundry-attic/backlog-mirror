@@ -1,15 +1,10 @@
 package mirror
 
+import gpt "github.com/salsita/go-pivotaltracker/v5/pivotal"
 
 //go:generate counterfeiter . StoryApi
 type StoryApi interface {
-	GetAllStories(projectId int) Story
-}
-
-type Story struct {
-	id int
-	projectId int
-	name string
+	GetAllStories(projectId int) *[]gpt.Story
 }
 
 type Mirror struct {
@@ -22,7 +17,6 @@ func NewMirror(givenStoryApi StoryApi) *Mirror {
 	}
 }
 
-//Big function. Woah.
 func (m *Mirror) MirrorBacklog() {
 	_ = m.storyApi.GetAllStories(100)
 }
