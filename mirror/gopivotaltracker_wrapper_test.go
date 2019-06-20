@@ -1,86 +1,101 @@
 package mirror_test
 
 import (
+	"errors"
 	. "github.com/cloudfoundry-incubator/backlog-mirror/mirror"
+	"github.com/cloudfoundry-incubator/backlog-mirror/mirror/mirrorfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gpt "github.com/salsita/go-pivotaltracker/v5/pivotal"
+	"net/url"
 )
 
+var _ = Describe("GetFilteredStories", func() {
 
-func fakeStories() []*gpt.Story {
-	story1 := gpt.Story{
-		ID:123,
-		ProjectID:5,
-		Name:"fakeStory1",
-	}
-	story2 := gpt.Story{
-		ID:456,
-		ProjectID:5,
-		Name:"fakeStory2",
-	}
+	var testStories []*gpt.Story
 
-	expectedStories := []*gpt.Story{&story1, &story2}
-	return expectedStories
-}
-
-type FakeStoryService struct {
-
-}
-
-func (*FakeStoryService) List(int, string) ([]*gpt.Story, error) {
-	return fakeStories(), nil
-}
-
-var _ = Describe("GetAllStories", func() {
-
-	It("Returns List of stories from api client", func() {
-
-		mockService := &FakeStoryService{}
-		wrapper := NewGoPivotalTrackerWrapper(mockService)
-
-
-		stories := wrapper.GetAllStories(2345567)
-		Expect(stories).To(Equal(fakeStories()))
-
-		//assert
-		//Expect(thing.callcount).To(Equal(1))
-	})
-	XIt("Non-mock Returns List of stories from api client", func() {
-		//setup
-
-		apiToken := "2b925062ab4acd76cf7cfda319d18158" //TODO: DO NOT COMMIT
-		client := gpt.NewClient(apiToken)
-
-		//client.Stories.List()
-
-		//apiClient = gpt.StoryService // mock
-		// expectedStoryList = {}
-		// when mockStoryService.List() .then(storyList)
-
-		wrapper := NewGoPivotalTrackerWrapper(client.Stories)
-
+	BeforeEach(func() {
+		someLabel := gpt.Label{
+			ID: 1,
+			ProjectID: 5,
+			Name: "someLabel",
+		}
 		story1 := gpt.Story{
 			ID:123,
 			ProjectID:5,
 			Name:"fakeStory1",
+			Labels: []*gpt.Label{&someLabel},
+
 		}
 		story2 := gpt.Story{
 			ID:456,
 			ProjectID:5,
 			Name:"fakeStory2",
+			Labels: []*gpt.Label{&someLabel},
 		}
+		testStories = []*gpt.Story{&story1, &story2}
+	})
 
-		expectedStories := []gpt.Story{story1, story2}
-		stories := wrapper.GetAllStories(2345567)
-		Expect(stories).To(Equal(expectedStories))
+	It("calls client with the projectId and filter", func() {
+		mockService := &mirrorfakes.FakeGoPivotalTrackerStoryService{}
 
-		// actualStories = gopivotaltrackerClient.GetAllStories()`
+		wrapper := NewGoPivotalTrackerWrapper(mockService)
 
+		_,_ = wrapper.GetFilteredStories(0, "someFilter")
 
-		//assert
-		//Expect(thing.callcount).To(Equal(1))
+		Expect(mockService.ListCallCount()).To(Equal(1))
+		projectIdArg, filterArg := mockService.ListArgsForCall(0)
+		Expect(projectIdArg).To(Equal(0))
+		Expect(filterArg).To(Equal("someFilter"))
+	})
 
-		// expect(actualStories).To(Equal(expectedStoryList))
+	It("returns filtered stories", func() {
+		mockService := &mirrorfakes.FakeGoPivotalTrackerStoryService{}
+		mockService.ListReturns(testStories, nil)
+		wrapper := NewGoPivotalTrackerWrapper(mockService)
+
+		stories, err := wrapper.GetFilteredStories(0, "someFilter")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stories).To(Equal(testStories))
+	})
+
+	It ("returns an error when List does", func() {
+		mockService := &mirrorfakes.FakeGoPivotalTrackerStoryService{}
+		mockService.ListReturns(nil, errors.New("some list error"))
+		wrapper := NewGoPivotalTrackerWrapper(mockService)
+
+		_, err := wrapper.GetFilteredStories(0, "someFilter")
+
+		Expect(err).To(HaveOccurred())
+	})
+})
+
+var _ = Describe("AddStoryToProject", func() {
+	It("Calls Create with the correct arguments", func(){
+		mockService := &mirrorfakes.FakeGoPivotalTrackerStoryService{}
+		projectId := 4
+
+		wrapper := NewGoPivotalTrackerWrapper(mockService)
+		storyRequest := gpt.StoryRequest{}
+
+		_ = wrapper.AddStoryToProject(projectId, &storyRequest)
+
+		Expect(mockService.CreateCallCount()).To(Equal(1))
+		projectIdArg, storyRequestArg := mockService.CreateArgsForCall(0)
+		Expect(projectIdArg).To(Equal(projectId))
+		Expect(*storyRequestArg).To(Equal(storyRequest))
+	})
+
+	It("returns an error when storyServiceCreate returns an error", func() {
+		mockService := &mirrorfakes.FakeGoPivotalTrackerStoryService{}
+		mockService.CreateReturns(nil, nil, &url.Error{"POST", "http://example.com", errors.New("")})
+		projectId := 4
+		wrapper := NewGoPivotalTrackerWrapper(mockService)
+		storyRequest := gpt.StoryRequest{}
+
+		err := wrapper.AddStoryToProject(projectId, &storyRequest)
+
+		Expect(err).To(HaveOccurred())
 	})
 })

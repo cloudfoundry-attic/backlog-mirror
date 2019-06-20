@@ -1,22 +1,49 @@
 package mirror
 
-import gpt "github.com/salsita/go-pivotaltracker/v5/pivotal"
+import (
+	"fmt"
+	gpt "github.com/salsita/go-pivotaltracker/v5/pivotal"
+)
 
-//go:generate counterfeiter . StoryApi
-type StoryApi interface {
-	GetAllStories(projectId int) *[]gpt.Story
+//go:generate counterfeiter . TrackerClient
+type TrackerClient interface {
+	GetFilteredStories(int, string) ([]*gpt.Story, error)
+	AddStoryToProject(int, *gpt.StoryRequest) error
 }
 
 type Mirror struct {
-	storyApi StoryApi
+	trackerClient TrackerClient
 }
 
-func NewMirror(givenStoryApi StoryApi) *Mirror {
+func NewMirror(givenClient TrackerClient) *Mirror {
 	return &Mirror{
-		givenStoryApi,
+		givenClient,
 	}
 }
 
-func (m *Mirror) MirrorBacklog() {
-	_ = m.storyApi.GetAllStories(100)
+func buildStoryRequest(story *gpt.Story) *gpt.StoryRequest {
+	request := gpt.StoryRequest{
+		Name: story.Name,
+		Type: story.Type,
+		State: story.State,
+		Description: story.Description,
+	}
+	return &request
+}
+
+func (m *Mirror) MirrorBacklog(privateProjectId, publicProjectId int) error{
+	publicLabelStories, err := m.trackerClient.GetFilteredStories(privateProjectId, "label:public")
+	if err != nil {
+		return fmt.Errorf("mirror failed with client error: %s", err)
+	}
+
+	for i:=0;i< len(publicLabelStories);i++ {
+		story := publicLabelStories[i]
+		storyRequest := buildStoryRequest(story)
+		err := m.trackerClient.AddStoryToProject(publicProjectId, storyRequest)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
