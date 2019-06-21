@@ -21,6 +21,18 @@ type FakeTrackerClient struct {
 	addStoryToProjectReturnsOnCall map[int]struct {
 		result1 error
 	}
+	DeleteStoryStub        func(int, int) error
+	deleteStoryMutex       sync.RWMutex
+	deleteStoryArgsForCall []struct {
+		arg1 int
+		arg2 int
+	}
+	deleteStoryReturns struct {
+		result1 error
+	}
+	deleteStoryReturnsOnCall map[int]struct {
+		result1 error
+	}
 	GetFilteredStoriesStub        func(int, string) ([]*pivotal.Story, error)
 	getFilteredStoriesMutex       sync.RWMutex
 	getFilteredStoriesArgsForCall []struct {
@@ -100,6 +112,67 @@ func (fake *FakeTrackerClient) AddStoryToProjectReturnsOnCall(i int, result1 err
 	}{result1}
 }
 
+func (fake *FakeTrackerClient) DeleteStory(arg1 int, arg2 int) error {
+	fake.deleteStoryMutex.Lock()
+	ret, specificReturn := fake.deleteStoryReturnsOnCall[len(fake.deleteStoryArgsForCall)]
+	fake.deleteStoryArgsForCall = append(fake.deleteStoryArgsForCall, struct {
+		arg1 int
+		arg2 int
+	}{arg1, arg2})
+	fake.recordInvocation("DeleteStory", []interface{}{arg1, arg2})
+	fake.deleteStoryMutex.Unlock()
+	if fake.DeleteStoryStub != nil {
+		return fake.DeleteStoryStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.deleteStoryReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeTrackerClient) DeleteStoryCallCount() int {
+	fake.deleteStoryMutex.RLock()
+	defer fake.deleteStoryMutex.RUnlock()
+	return len(fake.deleteStoryArgsForCall)
+}
+
+func (fake *FakeTrackerClient) DeleteStoryCalls(stub func(int, int) error) {
+	fake.deleteStoryMutex.Lock()
+	defer fake.deleteStoryMutex.Unlock()
+	fake.DeleteStoryStub = stub
+}
+
+func (fake *FakeTrackerClient) DeleteStoryArgsForCall(i int) (int, int) {
+	fake.deleteStoryMutex.RLock()
+	defer fake.deleteStoryMutex.RUnlock()
+	argsForCall := fake.deleteStoryArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeTrackerClient) DeleteStoryReturns(result1 error) {
+	fake.deleteStoryMutex.Lock()
+	defer fake.deleteStoryMutex.Unlock()
+	fake.DeleteStoryStub = nil
+	fake.deleteStoryReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeTrackerClient) DeleteStoryReturnsOnCall(i int, result1 error) {
+	fake.deleteStoryMutex.Lock()
+	defer fake.deleteStoryMutex.Unlock()
+	fake.DeleteStoryStub = nil
+	if fake.deleteStoryReturnsOnCall == nil {
+		fake.deleteStoryReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteStoryReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeTrackerClient) GetFilteredStories(arg1 int, arg2 string) ([]*pivotal.Story, error) {
 	fake.getFilteredStoriesMutex.Lock()
 	ret, specificReturn := fake.getFilteredStoriesReturnsOnCall[len(fake.getFilteredStoriesArgsForCall)]
@@ -169,6 +242,8 @@ func (fake *FakeTrackerClient) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.addStoryToProjectMutex.RLock()
 	defer fake.addStoryToProjectMutex.RUnlock()
+	fake.deleteStoryMutex.RLock()
+	defer fake.deleteStoryMutex.RUnlock()
 	fake.getFilteredStoriesMutex.RLock()
 	defer fake.getFilteredStoriesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

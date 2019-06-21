@@ -7,7 +7,6 @@ import (
 )
 
 type GoPivotalTrackerWrapper struct {
-	//client *gpt.Client
 	storyService GoPivotalTrackerStoryService
 }
 
@@ -37,4 +36,8 @@ func (wrapper *GoPivotalTrackerWrapper) AddStoryToProject(projectId int, request
 		return err
 	}
 	return nil
+}
+
+func(wrapper *GoPivotalTrackerWrapper) DeleteStory(projectId int, storyId int) error {
+	panic("not implemented!")
 }
