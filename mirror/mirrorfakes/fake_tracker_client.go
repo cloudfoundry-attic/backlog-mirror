@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/backlog-mirror/mirror"
-	"github.com/salsita/go-pivotaltracker/v5/pivotal"
+	"gopkg.in/salsita/go-pivotaltracker.v2/v5/pivotal"
 )
 
 type FakeTrackerClient struct {

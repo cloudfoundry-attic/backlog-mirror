@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/cloudfoundry-incubator/backlog-mirror/mirror"
-	gpt "github.com/salsita/go-pivotaltracker/v5/pivotal"
+	gpt "gopkg.in/salsita/go-pivotaltracker.v2/v5/pivotal"
 	"os"
 	"strconv"
 )
