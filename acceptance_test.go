@@ -17,12 +17,12 @@ import (
 
 const (
 	privateBacklogId = 2345567
-	publicBacklogId = 2345570
+	publicBacklogId  = 2345570
 )
 
 type story struct {
-	Id int
-	Name string
+	Id            int
+	Name          string
 	Current_state string
 }
 
@@ -102,7 +102,7 @@ var _ = Describe("Backlog Mirror Application", func() {
 		Expect(storyNames).To(ContainElement(testStory.Name))
 	})
 
-	AfterSuite(func(){
+	AfterSuite(func() {
 		if testStory.Id != 0 {
 			trackerStoriesEndpoint := "https://www.pivotaltracker.com/services/v5/projects/2345567/stories/" + strconv.Itoa(testStory.Id)
 
@@ -111,8 +111,8 @@ var _ = Describe("Backlog Mirror Application", func() {
 
 			response, err := http.DefaultClient.Do(req)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(response.StatusCode).To(BeNumerically(">=",200))
-			Expect(response.StatusCode).To(BeNumerically("<",300))
+			Expect(response.StatusCode).To(BeNumerically(">=", 200))
+			Expect(response.StatusCode).To(BeNumerically("<", 300))
 		}
 	})
 })

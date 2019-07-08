@@ -1,21 +1,24 @@
 package main
 
 import (
-	"github.com/cloudfoundry-incubator/backlog-mirror/mirror"
-	gpt "gopkg.in/salsita/go-pivotaltracker.v2/v5/pivotal"
+	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/cloudfoundry-incubator/backlog-mirror/mirror"
+	gpt "gopkg.in/salsita/go-pivotaltracker.v2/v5/pivotal"
 )
 
-const(
+const (
 	exitVariablesUnset = 1
-	exitMirrorFailure = 2
+	exitMirrorFailure  = 2
 )
 
 func main() {
-	gptStoryService := gpt.NewClient(os.Getenv("TRACKER_API_TOKEN")).Stories
-	client := mirror.NewGoPivotalTrackerWrapper(gptStoryService)
-	m := mirror.NewMirror(client)
+	trackerApiClient := gpt.NewClient(os.Getenv("TRACKER_API_TOKEN"))
+	gptStoryService := trackerApiClient.Stories
+	ourClient := mirror.NewGoPivotalTrackerWrapper(gptStoryService, trackerApiClient)
+	m := mirror.NewMirror(ourClient)
 
 	origBacklog, errO := strconv.Atoi(os.Getenv("TRACKER_ORIG_BACKLOG"))
 	destBacklog, errD := strconv.Atoi(os.Getenv("TRACKER_DEST_BACKLOG"))
@@ -26,6 +29,7 @@ func main() {
 	err := m.MirrorBacklog(origBacklog, destBacklog)
 
 	if err != nil {
+		fmt.Print(fmt.Errorf("error while mirroring:\n %s", err))
 		os.Exit(exitMirrorFailure)
 	}
 }

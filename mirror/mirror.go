@@ -2,6 +2,7 @@ package mirror
 
 import (
 	"fmt"
+
 	gpt "gopkg.in/salsita/go-pivotaltracker.v2/v5/pivotal"
 )
 
@@ -23,11 +24,13 @@ func NewMirror(givenClient TrackerClient) *Mirror {
 }
 
 func buildStoryRequest(story *gpt.Story) *gpt.StoryRequest {
+	publicLabel := &gpt.Label{Name: "public"}
 	request := gpt.StoryRequest{
-		Name: story.Name,
-		Type: story.Type,
-		State: story.State,
+		Name:        story.Name,
+		Type:        story.Type,
+		State:       story.State,
 		Description: story.Description,
+		Labels:      &[]*gpt.Label{publicLabel},
 	}
 	return &request
 }
@@ -43,13 +46,21 @@ func (m *Mirror) addAllStoriesToBacklog(stories []*gpt.Story, backlogId int) err
 	return nil
 }
 
-//func (m *Mirror) deleteAllStoriesFromBacklog(stories []*gpt.Story, backlogId int) error {
-func (m *Mirror) deleteAllStoriesFromBacklog(backlogId int) error {
-	err := m.trackerClient.DeleteStory(backlogId, 0)
-	return err
+func (m *Mirror) deleteExistingPublicLabelStoriesFromBacklog(publicLabelStoriesInPublicBacklog []*gpt.Story, backlogId int) error {
+	//publicLabelStoriesInPublicBacklog, err := m.trackerClient.GetFilteredStories(backlogId, "label:public")
+	//if err != nil {
+	//	return err
+	//}
+	for _, story := range publicLabelStoriesInPublicBacklog {
+		err := m.trackerClient.DeleteStory(backlogId, story.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (m *Mirror) MirrorBacklog(privateProjectId, publicProjectId int) error{
+func (m *Mirror) MirrorBacklog(privateProjectId, publicProjectId int) error {
 	publicLabelStories, err := m.trackerClient.GetFilteredStories(privateProjectId, "label:public")
 	if err != nil {
 		return fmt.Errorf("mirror failed with client error: %s", err)
@@ -59,9 +70,11 @@ func (m *Mirror) MirrorBacklog(privateProjectId, publicProjectId int) error{
 	if err != nil {
 		return fmt.Errorf("mirror failed with add-story error: %s", err)
 	}
-
-	err = m.deleteAllStoriesFromBacklog(publicProjectId)
-
+	publicLabelStoriesInPublicBacklog, err := m.trackerClient.GetFilteredStories(publicProjectId, "label:public")
+	err = m.deleteExistingPublicLabelStoriesFromBacklog(publicLabelStoriesInPublicBacklog, publicProjectId)
+	if err != nil {
+		return fmt.Errorf("mirror failed to delete stories:\n %s", err)
+	}
 
 	return nil
 }
