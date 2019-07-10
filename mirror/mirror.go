@@ -66,11 +66,16 @@ func (m *Mirror) MirrorBacklog(privateProjectId, publicProjectId int) error {
 		return fmt.Errorf("mirror failed with client error: %s", err)
 	}
 
+	publicLabelStoriesInPublicBacklog, err := m.trackerClient.GetFilteredStories(publicProjectId, "label:public")
+	if err != nil {
+		return fmt.Errorf("mirror failed with client error: %s", err)
+	}
+
 	err = m.addAllStoriesToBacklog(publicLabelStories, publicProjectId)
 	if err != nil {
 		return fmt.Errorf("mirror failed with add-story error: %s", err)
 	}
-	publicLabelStoriesInPublicBacklog, err := m.trackerClient.GetFilteredStories(publicProjectId, "label:public")
+
 	err = m.deleteExistingPublicLabelStoriesFromBacklog(publicLabelStoriesInPublicBacklog, publicProjectId)
 	if err != nil {
 		return fmt.Errorf("mirror failed to delete stories:\n %s", err)

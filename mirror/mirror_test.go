@@ -3,15 +3,15 @@ package mirror_test
 import (
 	"errors"
 	"fmt"
-
 	. "github.com/cloudfoundry-incubator/backlog-mirror/mirror"
 	"github.com/cloudfoundry-incubator/backlog-mirror/mirror/mirrorfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gpt "gopkg.in/salsita/go-pivotaltracker.v2/v5/pivotal"
+	"math/rand"
 )
 
-var _ = Describe("Backlog Mirror", func() {
+var _ = Describe("MirrorBacklog", func() {
 
 	var privateProjectId int
 	var publicProjectId int
@@ -167,12 +167,12 @@ var _ = Describe("Backlog Mirror", func() {
 	Describe("deletes existing stories in public backlog", func() {
 
 		var publicLabeledStoriesAlreadyInPublicBacklog []*gpt.Story
-		//var storiesInsd
 
 		setup := func() {
 			privateProjectId = 7
 			publicProjectId = 8
 			trackerClient = &mirrorfakes.FakeTrackerClient{}
+
 			story1 := gpt.Story{
 				ID:          789,
 				ProjectID:   privateProjectId,
@@ -191,14 +191,48 @@ var _ = Describe("Backlog Mirror", func() {
 			}
 
 			publicLabeledStoriesAlreadyInPublicBacklog = []*gpt.Story{&story1, &story2}
-			//trackerClient.GetFilteredStoriesReturns(publicStories, nil)
+
+			story3 := gpt.Story{
+				ID:          189,
+				ProjectID:   privateProjectId,
+				Name:        "fakeStory1",
+				Type:        gpt.StoryTypeChore,
+				State:       gpt.StoryStateStarted,
+				Description: "description1",
+			}
+			story4 := gpt.Story{
+				ID:          134,
+				ProjectID:   privateProjectId,
+				Name:        "fakeStory2",
+				Type:        gpt.StoryTypeFeature,
+				State:       gpt.StoryStatePlanned,
+				Description: "description2",
+			}
+
+			publicLabeledStoriesInPrivateBacklog := []*gpt.Story{&story3, &story4}
 
 			trackerClient.GetFilteredStoriesStub = func(i int, s string) ([]*gpt.Story, error) {
+				if i == privateProjectId {
+					return publicLabeledStoriesInPrivateBacklog, nil
+				}
 				if i == publicProjectId {
 					return publicLabeledStoriesAlreadyInPublicBacklog, nil
 				}
 
 				return []*gpt.Story{}, nil
+			}
+
+			trackerClient.AddStoryToProjectStub = func(i int, s *gpt.StoryRequest) error {
+
+				publicLabeledStoriesAlreadyInPublicBacklog = append(publicLabeledStoriesAlreadyInPublicBacklog, &gpt.Story{
+					ID:          rand.Intn(200),
+					ProjectID:   publicProjectId,
+					Name:        s.Name,
+					Type:        s.Type,
+					State:       s.State,
+					Description: s.Description,
+				})
+				return nil
 			}
 		}
 
@@ -207,8 +241,6 @@ var _ = Describe("Backlog Mirror", func() {
 		})
 
 		It("deletes existing stories in public backlog", func() {
-			privateProjectId := 7
-			publicProjectId := 8
 
 			mirror := *NewMirror(trackerClient)
 
@@ -227,15 +259,17 @@ var _ = Describe("Backlog Mirror", func() {
 		})
 
 		It("gets stories-to-delete from public backlog before adding private-backlog stories", func() {
-			privateProjectId := 7
-			publicProjectId := 8
 
 			mirror := *NewMirror(trackerClient)
 
-			_ = mirror.MirrorBacklog(privateProjectId, publicProjectId)
+			err := mirror.MirrorBacklog(privateProjectId, publicProjectId)
+			Expect(err).ToNot(HaveOccurred())
 
 			trackerClientCalls := trackerClient.Invocations()
-			Expect(len(trackerClientCalls)).To(Equal(-1))
+			deleteCalls := trackerClientCalls["DeleteStory"]
+			Expect(len(deleteCalls)).To(Equal(2))
+			Expect(deleteCalls).Should(ContainElement(ConsistOf(publicProjectId, 789)))
+			Expect(deleteCalls).Should(ContainElement(ConsistOf(publicProjectId, 234)))
 		})
 
 		It("returns error if the tracker client errors on retrieval of public stories", func() {
@@ -251,7 +285,7 @@ var _ = Describe("Backlog Mirror", func() {
 			err := mirror.MirrorBacklog(privateProjectId, publicProjectId)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(fmt.Errorf("mirror failed to delete stories:\n %s", "fake retrieval error")))
+			Expect(err).To(MatchError(fmt.Errorf("mirror failed with client error: %s", "fake retrieval error")))
 		})
 
 		It("returns error if the tracker client errors on story deletion", func() {
