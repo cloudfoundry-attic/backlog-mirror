@@ -47,10 +47,6 @@ func (m *Mirror) addAllStoriesToBacklog(stories []*gpt.Story, backlogId int) err
 }
 
 func (m *Mirror) deleteExistingPublicLabelStoriesFromBacklog(publicLabelStoriesInPublicBacklog []*gpt.Story, backlogId int) error {
-	//publicLabelStoriesInPublicBacklog, err := m.trackerClient.GetFilteredStories(backlogId, "label:public")
-	//if err != nil {
-	//	return err
-	//}
 	for _, story := range publicLabelStoriesInPublicBacklog {
 		err := m.trackerClient.DeleteStory(backlogId, story.ID)
 		if err != nil {

@@ -15,7 +15,13 @@ const (
 )
 
 func main() {
-	trackerApiClient := gpt.NewClient(os.Getenv("TRACKER_API_TOKEN"))
+	trackerApiToken := os.Getenv("TRACKER_API_TOKEN")
+	if trackerApiToken == "" {
+		fmt.Fprint(os.Stderr, "TRACKER_API_TOKEN must be set")
+		os.Exit(exitVariablesUnset)
+	}
+	trackerApiClient := gpt.NewClient(trackerApiToken)
+
 	gptStoryService := trackerApiClient.Stories
 	ourClient := mirror.NewGoPivotalTrackerWrapper(gptStoryService, trackerApiClient)
 	m := mirror.NewMirror(ourClient)

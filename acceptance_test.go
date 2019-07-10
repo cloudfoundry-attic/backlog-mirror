@@ -3,6 +3,7 @@ package main_test
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/onsi/gomega/gexec"
 	"github.com/gofrs/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,11 +16,6 @@ import (
 	"time"
 )
 
-const (
-	privateBacklogId = 2345567
-	publicBacklogId  = 2345570
-)
-
 type story struct {
 	Id            int
 	Name          string
@@ -28,38 +24,41 @@ type story struct {
 
 var _ = Describe("Backlog Mirror Application", func() {
 
-	var apiToken string
 	var testStory story
 
-	runBacklogMirror := func() {
-		backlogMirrorCmd := exec.Command("./backlog-mirror")
-
+	runBacklogMirror := func() *gexec.Session {
+		backlogMirrorCmd := exec.Command(BacklogMirrorExecutable)
+		backlogMirrorCmd.Stderr = os.Stderr
 		backlogMirrorCmd.Env = []string{
-			fmt.Sprintf("TRACKER_API_TOKEN=%s", apiToken),
-			fmt.Sprintf("TRACKER_ORIG_BACKLOG=%d", privateBacklogId),
-			fmt.Sprintf("TRACKER_DEST_BACKLOG=%d", publicBacklogId),
+			fmt.Sprintf("TRACKER_API_TOKEN=%s", APIToken),
+			fmt.Sprintf("TRACKER_ORIG_BACKLOG=%d", PrivateBacklogId),
+			fmt.Sprintf("TRACKER_DEST_BACKLOG=%d", PublicBacklogId),
 		}
 
-		err := backlogMirrorCmd.Run()
+		session, err := gexec.Start(backlogMirrorCmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		time.Sleep(1 * time.Second)
+		return session
 	}
 
 	setupNewPublicLabelStory := func() {
-		uuid, _ := uuid.NewV4()
-		testStoryName := "story to be made public " + uuid.String()
+		uuid, err := uuid.NewV4()
+		Expect(err).ToNot(HaveOccurred())
 
-		requestJson := fmt.Sprintf(
+		testStoryName := "story to be made public " + uuid.String()
+		storyRequest := fmt.Sprintf(
 			`{
 			"name": "%s",
 			"current_state": "unstarted",
 			"labels": ["public"]
 		}`, testStoryName)
 
-		privateBacklogStoriesEndpoint := fmt.Sprintf("https://www.pivotaltracker.com/services/v5/projects/%d/stories", privateBacklogId)
-		req, _ := http.NewRequest("POST", privateBacklogStoriesEndpoint, strings.NewReader(requestJson))
-		req.Header.Add("X-TrackerToken", apiToken)
+		privateBacklogStoriesEndpoint := fmt.Sprintf(StoriesEndpoint, PrivateBacklogId)
+
+		req, err := http.NewRequest("POST", privateBacklogStoriesEndpoint, strings.NewReader(storyRequest))
+		Expect(err).ToNot(HaveOccurred())
+		req.Header.Add("X-TrackerToken", APIToken)
 		req.Header.Add("Content-Type", "application/json")
+
 		resp, err := http.DefaultClient.Do(req)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -75,17 +74,12 @@ var _ = Describe("Backlog Mirror Application", func() {
 	}
 
 	It("Clones a story from private to public backlog", func() {
-		err := exec.Command("go", "build").Run()
-		Expect(err).NotTo(HaveOccurred())
-
-		apiToken = os.Getenv("TRACKER_API_TOKEN")
-		Expect(apiToken).NotTo(BeEmpty())
 
 		setupNewPublicLabelStory()
+		session := runBacklogMirror()
+		Eventually(session, 12 * time.Second).Should(gexec.Exit(0))
 
-		runBacklogMirror()
-
-		publicBacklogStoriesEndpoint := fmt.Sprintf("https://www.pivotaltracker.com/services/v5/projects/%d/stories", publicBacklogId)
+		publicBacklogStoriesEndpoint := fmt.Sprintf(StoriesEndpoint, PublicBacklogId)
 		storiesResponse, err := http.Get(publicBacklogStoriesEndpoint)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(storiesResponse).NotTo(BeNil())
@@ -102,12 +96,12 @@ var _ = Describe("Backlog Mirror Application", func() {
 		Expect(storyNames).To(ContainElement(testStory.Name))
 	})
 
-	AfterSuite(func() {
+	AfterEach(func() {
 		if testStory.Id != 0 {
 			trackerStoriesEndpoint := "https://www.pivotaltracker.com/services/v5/projects/2345567/stories/" + strconv.Itoa(testStory.Id)
 
 			req, _ := http.NewRequest(http.MethodDelete, trackerStoriesEndpoint, nil)
-			req.Header.Add("X-TrackerToken", apiToken)
+			req.Header.Add("X-TrackerToken", APIToken)
 
 			response, err := http.DefaultClient.Do(req)
 			Expect(err).ToNot(HaveOccurred())

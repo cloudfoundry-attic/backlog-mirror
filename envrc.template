@@ -1,3 +1,7 @@
 export TRACKER_API_TOKEN=[token from username > profile > api token]
 export TRACKER_ORIG_BACKLOG=
 export TRACKER_DEST_BACKLOG=
+
+// we recommend using separate backlogs for tests in development
+//export TEST_TRACKER_ORIG_BACKLOG=
+//export TEST_TRACKER_DEST_BACKLOG=
