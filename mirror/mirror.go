@@ -31,6 +31,8 @@ func buildStoryRequest(story *gpt.Story) *gpt.StoryRequest {
 		State:       story.State,
 		Description: story.Description,
 		Labels:      &[]*gpt.Label{publicLabel},
+		Estimate: 	 story.Estimate,
+		OwnerIDs:    &story.OwnerIDs,
 	}
 	return &request
 }

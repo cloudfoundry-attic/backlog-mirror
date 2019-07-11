@@ -29,6 +29,7 @@ func main() {
 	origBacklog, errO := strconv.Atoi(os.Getenv("TRACKER_ORIG_BACKLOG"))
 	destBacklog, errD := strconv.Atoi(os.Getenv("TRACKER_DEST_BACKLOG"))
 	if errO != nil || errD != nil {
+		fmt.Fprint(os.Stderr, "TRACKER_ORIG_BACKLOG and TRACKER_DEST_BACKLOG must be set")
 		os.Exit(exitVariablesUnset)
 	}
 
